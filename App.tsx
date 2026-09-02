@@ -1,0 +1,1060 @@
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import {
+  Sparkles, Wand2, BookOpen, GraduationCap, Coins, Zap, Heart,
+  Star, Shield, Award, RefreshCw, HelpCircle,
+  X, CheckCircle2, AlertTriangle, ChevronRight, Crown, Smile, Moon, Sun, Flame, Scroll
+} from 'lucide-react';
+
+function StatBar({ label, val, max, color, threshold }) {
+  const percent = Math.min(100, (val / max) * 100);
+  const isQualified = threshold ? val >= threshold : true;
+  return (
+    <div className="w-full">
+      <div className="flex justify-between items-end mb-1">
+        <span className="text-[14px] font-black text-white uppercase tracking-wider flex items-center gap-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+          {label} {threshold && (isQualified ? <CheckCircle2 size={13} className="text-emerald-400" /> : <Star size={13} className="text-amber-400" />)}
+        </span>
+        <span className={`text-[18px] font-black ${threshold && !isQualified ? 'text-rose-400' : 'text-white'} drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]`}>{val}</span>
+      </div>
+      <div className="h-3.5 bg-[#f5ebd6] rounded-full border-2 border-[#8c4a29]/80 overflow-hidden relative shadow-inner">
+        <div className={`h-full ${color} rounded-full transition-all duration-1000`} style={{ width: `${percent}%` }}>
+          <div className="absolute inset-0 bg-white/30" style={{ animation: 'shimmer 2s linear infinite' }}></div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const DragonAvatar = ({ size = "text-[60px]", className = "", withHat = true }) => (
+  <div className={`relative inline-block leading-none select-none ${size} ${className}`}>
+    {withHat && (
+      <div className="absolute bottom-[48%] left-[72%] -translate-x-1/2 text-[0.32em] z-50 select-none pointer-events-none drop-shadow-lg">
+        🧙‍♂️
+      </div>
+    )}
+    <div className="relative inline-block">
+      🐉
+    </div>
+  </div>
+);
+
+const INTRO_STEPS = [
+  { text: "Greetings, young drake! I am the Headmaster of The Dragon Academy.", emote: "🧙‍♂️🐉" },
+  { text: "The Grand Flame Tournament is in 7 days. You must master English vocabulary spells to win the Ruby Fire Wand!", emote: "🔮🔥" },
+  { text: "Your rival thinks he's the fiercest dragon in the realm. Let's prove him wrong!", emote: "🐲📚" },
+  { text: "Manage your fiery energy, brew alchemy potions, study hard, and become the Grand Wizard of Lexicon!", emote: "🌟🪄" }
+];
+
+const MAGIC_QUESTIONS = {
+  vocab: [
+    { id: 'v1', q: "Which magical item do wizard dragons use to cast spells?", a: ["Wand", "Sword", "Shield"], correct: 0 },
+    { id: 'v2', q: "What do you call a flying animal with leathery wings in dark caves?", a: ["Bat", "Dog", "Fish"], correct: 0 },
+    { id: 'v3', q: "Which of these is a sweet, frozen magical treat?", a: ["Ice cream", "Stone", "Sand"], correct: 0 },
+    { id: 'v4', q: "What color is a fresh magical emerald?", a: ["Green", "Pink", "Black"], correct: 0 },
+    { id: 'v5', q: "Where do you go to read ancient spell books?", a: ["Library", "Kitchen", "Roof"], correct: 0 },
+    { id: 'v6', q: "What is the opposite of 'hot' in wizardry?", a: ["Cold", "Warm", "Bright"], correct: 0 },
+    { id: 'v7', q: "Which animal breathes magical fire and hoards gold?", a: ["Dragon", "Frog", "Duck"], correct: 0 },
+    { id: 'v8', q: "What falls from the clouds when it rains?", a: ["Water drops", "Stars", "Gold coins"], correct: 0 },
+    { id: 'v9', q: "How many days are in a single week?", a: ["7", "5", "10"], correct: 0 },
+    { id: 'v10', q: "What do you wear on your head to block the sun?", a: ["Hat", "Shoe", "Glove"], correct: 0 },
+    { id: 'v11', q: "What is the opposite of 'fast'?", a: ["Slow", "Quick", "Rapid"], correct: 0 },
+    { id: 'v12', q: "Which animal is known as man's best friend?", a: ["Dog", "Snake", "Shark"], correct: 0 },
+    { id: 'v13', q: "What do you use to write on a paper notebook?", a: ["Pencil", "Spoon", "Hammer"], correct: 0 },
+    { id: 'v14', q: "What season comes right after winter?", a: ["Spring", "Autumn", "Summer"], correct: 0 },
+    { id: 'v15', q: "Which planet do we live on?", a: ["Earth", "Mars", "Venus"], correct: 0 },
+    { id: 'v16', q: "What do you call the meal you eat in the morning?", a: ["Breakfast", "Dinner", "Lunch"], correct: 0 },
+    { id: 'v17', q: "Which instrument has black and white keys?", a: ["Piano", "Drum", "Flute"], correct: 0 },
+    { id: 'v18', q: "What is the main color of a clear daytime sky?", a: ["Blue", "Green", "Purple"], correct: 0 },
+    { id: 'v19', q: "Which shape has three sides?", a: ["Triangle", "Square", "Circle"], correct: 0 },
+    { id: 'v20', q: "What do you open when it starts raining outdoors?", a: ["Umbrella", "Book", "Window"], correct: 0 },
+    { id: 'v21', q: "Which animal has a very long neck and eats leaves?", a: ["Giraffe", "Lion", "Bear"], correct: 0 },
+    { id: 'v22', q: "What is the opposite of 'happy'?", a: ["Sad", "Glad", "Joyful"], correct: 0 },
+    { id: 'v23', q: "Which metal is shiny, yellow, and very precious?", a: ["Gold", "Iron", "Lead"], correct: 0 },
+    { id: 'v24', q: "What do you use to cut paper neatly?", a: ["Scissors", "Ruler", "Eraser"], correct: 0 },
+    { id: 'v25', q: "Which direction does the sun rise from?", a: ["East", "West", "North"], correct: 0 },
+    { id: 'v26', q: "What is a baby dog called?", a: ["Puppy", "Kitten", "Calf"], correct: 0 },
+    { id: 'v27', q: "Which fruit is yellow and curved?", a: ["Banana", "Apple", "Peach"], correct: 0 },
+    { id: 'v28', q: "What do you wear on your feet inside shoes?", a: ["Socks", "Gloves", "Hats"], correct: 0 },
+    { id: 'v29', q: "Which animal hops and carries babies in a pouch?", a: ["Kangaroo", "Elephant", "Tiger"], correct: 0 },
+    { id: 'v30', q: "What is the opposite of 'noisy'?", a: ["Quiet", "Loud", "Busy"], correct: 0 },
+    { id: 'v31', q: "Which room in a house do you cook food in?", a: ["Kitchen", "Bedroom", "Garage"], correct: 0 },
+    { id: 'v32', q: "What do you use to check the time on your wrist?", a: ["Watch", "Compass", "Map"], correct: 0 },
+    { id: 'v33', q: "Which insect makes sweet honey?", a: ["Bee", "Ant", "Fly"], correct: 0 },
+    { id: 'v34', q: "What is the opposite of 'heavy'?", a: ["Light", "Dark", "Hard"], correct: 0 },
+    { id: 'v35', q: "Which month is the first month of the year?", a: ["January", "December", "March"], correct: 0 },
+    { id: 'v36', q: "What do you use to lock a wooden door?", a: ["Key", "Knife", "Brush"], correct: 0 },
+    { id: 'v37', q: "Which animal is the king of the jungle?", a: ["Lion", "Monkey", "Zebra"], correct: 0 },
+    { id: 'v38', q: "What is the opposite of 'clean'?", a: ["Dirty", "Pure", "Bright"], correct: 0 },
+    { id: 'v39', q: "Which vegetable is orange and rabbits love it?", a: ["Carrot", "Potato", "Cabbage"], correct: 0 },
+    { id: 'v40', q: "What do you use to see distant stars at night?", a: ["Telescope", "Microscope", "Camera"], correct: 0 },
+    { id: 'v41', q: "Which bird cannot fly but swims swiftly in ice?", a: ["Penguin", "Eagle", "Sparrow"], correct: 0 },
+    { id: 'v42', q: "What is the opposite of 'tall'?", a: ["Short", "Long", "High"], correct: 0 },
+    { id: 'v43', q: "Which drink is made from roasted coffee beans?", a: ["Coffee", "Milk", "Juice"], correct: 0 },
+    { id: 'v44', q: "What do you sleep on every night?", a: ["Bed", "Desk", "Sofa"], correct: 0 },
+    { id: 'v45', q: "Which season is the hottest of the year?", a: ["Summer", "Winter", "Spring"], correct: 0 },
+    { id: 'v46', q: "What is the opposite of 'rich'?", a: ["Poor", "Wealthy", "Wise"], correct: 0 }
+  ],
+  grammar: [
+    { id: 'g1', q: "She ___ breakfast every single morning.", a: ["eats", "eat", "eating"], correct: 0 },
+    { id: 'g2', q: "I usually go to sleep ___ 10 p.m.", a: ["at", "on", "in"], correct: 0 },
+    { id: 'g3', q: "They ___ playing soccer in the courtyard now.", a: ["are", "is", "am"], correct: 0 },
+    { id: 'g4', q: "He ___ speak magical English fluently.", a: ["can", "is", "does"], correct: 0 },
+    { id: 'g5', q: "Please ___ the wooden door before entering.", a: ["close", "closed", "closing"], correct: 0 },
+    { id: 'g6', q: "We ___ many interesting spell books yesterday.", a: ["read", "reads", "reading"], correct: 0 },
+    { id: 'g7', q: "This is ___ apple I found in the enchanted garden.", a: ["an", "a", "the"], correct: 0 },
+    { id: 'g8', q: "Where ___ you yesterday afternoon?", a: ["were", "was", "are"], correct: 0 },
+    { id: 'g9', q: "The magical tower is much ___ than the hut.", a: ["taller", "tall", "tallest"], correct: 0 },
+    { id: 'g10', q: "Thank you for your wonderful help!", a: ["You're welcome.", "I am fine.", "Goodbye."], correct: 0 },
+    { id: 'g11', q: "He ___ to school by bus every single morning.", a: ["goes", "go", "going"], correct: 0 },
+    { id: 'g12', q: "My mother ___ a delicious cake for my birthday last night.", a: ["baked", "bake", "baking"], correct: 0 },
+    { id: 'g13', q: "Look! The little kittens ___ playing with yarn.", a: ["are", "is", "am"], correct: 0 },
+    { id: 'g14', q: "I have known my best friend ___ three years.", a: ["for", "since", "during"], correct: 0 },
+    { id: 'g15', q: "This book is ___ than the one I read yesterday.", a: ["more interesting", "interesting", "most interesting"], correct: 0 },
+    { id: 'g16', q: "If it rains tomorrow, we ___ stay inside the castle.", a: ["will", "would", "did"], correct: 0 },
+    { id: 'g17', q: "She has ___ finished her magical homework.", a: ["already", "yet", "ever"], correct: 0 },
+    { id: 'g18', q: "The letter was written ___ John with a feather quill.", a: ["by", "with", "from"], correct: 0 },
+    { id: 'g19', q: "Do you know ___ girl wearing the golden crown?", a: ["the", "a", "an"], correct: 0 },
+    { id: 'g20', q: "Neither Tom ___ Jerry attended the spell class.", a: ["nor", "or", "and"], correct: 0 },
+    { id: 'g21', q: "She sings much ___ than anyone else in the choir.", a: ["better", "good", "best"], correct: 0 },
+    { id: 'g22', q: "I wish I ___ how to fly like a dragon.", a: ["knew", "know", "known"], correct: 0 },
+    { id: 'g23', q: "The magical bridge was built ___ the deep river.", a: ["across", "through", "over"], correct: 0 },
+    { id: 'g24', q: "He is the ___ wizard in our entire academy.", a: ["cleverest", "clever", "more clever"], correct: 0 },
+    { id: 'g25', q: "We should protect ___ environment from dark magic.", a: ["our", "ours", "us"], correct: 0 },
+    { id: 'g26', q: "The teacher asked us to listen ___ to the instructions.", a: ["carefully", "careful", "care"], correct: 0 },
+    { id: 'g27', q: "Have you ever ___ to the enchanted forest?", a: ["been", "go", "went"], correct: 0 },
+    { id: 'g28', q: "The students ___ finish their potion project by Friday.", a: ["must", "can", "may"], correct: 0 },
+    { id: 'g29', q: "That is the castle ___ the dragon lives.", a: ["where", "which", "who"], correct: 0 },
+    { id: 'g30', q: "She speaks English ___ than her brother.", a: ["fluently", "fluent", "most fluently"], correct: 0 },
+    { id: 'g31', q: "I am looking forward ___ seeing you at the ball.", a: ["to", "for", "at"], correct: 0 },
+    { id: 'g32', q: "The magic wand ___ by the wizard yesterday.", a: ["was found", "found", "is found"], correct: 0 },
+    { id: 'g33', q: "While I was reading, the phone ___ ringing.", a: ["started", "start", "starting"], correct: 0 },
+    { id: 'g34', q: "He is too young ___ ride the fierce dragon alone.", a: ["to", "for", "so"], correct: 0 },
+    { id: 'g35', q: "Mount Everest is ___ mountain in the world.", a: ["the highest", "higher than", "high"], correct: 0 },
+    { id: 'g36', q: "Despite the heavy rain, the students walked ___ school.", a: ["to", "at", "toward"], correct: 0 }
+  ],
+  brew: [
+    { id: 'b1', q: "What is required to brew a fiery potion of stamina?", a: ["Magma crystal", "Water", "Sand"], correct: 0 },
+    { id: 'b2', q: "How many drops of dragon tears go into the alchemical cauldron?", a: ["3 drops", "100 drops", "0 drops"], correct: 0 },
+    { id: 'b3', q: "Which color indicates a successful alchemical brew?", a: ["Golden amber", "Pitch black", "Muddy brown"], correct: 0 },
+    { id: 'b4', q: "What happens when the brewing temperature reaches its peak?", a: ["It sparkles brilliantly", "It freezes solid", "It vanishes"], correct: 0 }
+  ]
+};
+
+const DUEL_QUESTIONS = [
+  {
+    opponent: "Rival Dragon: 'Hah! Do you even know what this spell means? Which word means very large?'",
+    options: [
+      { text: "Gigantic", type: "correct" },
+      { text: "Tiny and microscopic", type: "wrong" },
+      { text: "Invisible floating dust", type: "wrong" }
+    ]
+  },
+  {
+    opponent: "Rival Dragon: 'Impressive! But can you answer this? What is the past tense of the verb 'run'?'",
+    options: [
+      { text: "Ran", type: "correct" },
+      { text: "Running", type: "wrong" },
+      { text: "Runned", type: "wrong" }
+    ]
+  },
+  {
+    opponent: "Rival Dragon: 'You're tougher than I thought! Tell me, what do you call a baby dragon?'",
+    options: [
+      { text: "Hatchling / Drake", type: "correct" },
+      { text: "Puppy", type: "wrong" },
+      { text: "Kitten", type: "wrong" }
+    ]
+  },
+  {
+    opponent: "Rival Dragon: 'Complete the sentence: 'If I ___ a dragon wizard, I would fly to the sun.''",
+    options: [
+      { text: "were", type: "correct" },
+      { text: "was", type: "wrong" },
+      { text: "am", type: "wrong" }
+    ]
+  },
+  {
+    opponent: "Rival Dragon: 'Dragon Lore #1: What is a dragon's absolute favorite midnight snack when studying spell books?'",
+    options: [
+      { text: "Crispy roasted magma crystals drizzled with spicy salsa", type: "correct" },
+      { text: "Spicy pepperoni taco pizza with extra jalapeños and stuffed crust", type: "funny" },
+      { text: "Deep-fried textbook pages seasoned with radioactive ghost pepper dust, causing them to burp radioactive confetti bubbles", type: "unhinged" }
+    ]
+  },
+  {
+    opponent: "Rival Dragon: 'Dragon Lore #2: Why do drakes prefer sleeping inside dark, rumbling volcanic caves?'",
+    options: [
+      { text: "To keep their glorious golden hoards delightfully warm and toasty", type: "correct" },
+      { text: "Because they are terrified of giant floating strawberry marshmallows wearing monocles", type: "funny" },
+      { text: "To practice competitive underwater trumpet soloing while sleepwalking upside down inside a boiling lava jacuzzi", type: "unhinged" }
+    ]
+  },
+  {
+    opponent: "Rival Dragon: 'Dragon Lore #3: What catastrophe occurs when a dragon sneezes without covering its snout?'",
+    options: [
+      { text: "A gigantic pillar of plasma fire shoots out and melts the obsidian chalkboard", type: "correct" },
+      { text: "Rainbow-colored soap bubbles float out and tickle the Headmaster's nose", type: "funny" },
+      { text: "Their tail spontaneously detaches, grows tiny legs, and starts tap-dancing aggressively while singing opera", type: "unhinged" }
+    ]
+  },
+  {
+    opponent: "Rival Dragon: 'Dragon Lore #4: How do young flying drakes measure their aerial speed?'",
+    options: [
+      { text: "By counting how many storm clouds they zoom past in a single minute", type: "correct" },
+      { text: "By measuring how loud their dragon sneakers squeak on cloud surfaces", type: "funny" },
+      { text: "By racing against runaway enchanted cheese wheels down the volcano slopes while balancing teacups on their snouts", type: "unhinged" }
+    ]
+  },
+  {
+    opponent: "Rival Dragon: 'Dragon Lore #5: What is the secret magical ingredient in the Headmaster's morning tea?'",
+    options: [
+      { text: "Sparkling starlight dew drops collected from the tallest magic tower", type: "correct" },
+      { text: "Liquid gold syrup mixed generously with sweet strawberry jam", type: "funny" },
+      { text: "Squeezed goblin socks boiled rigorously with fermented dragon toenail clippings and glowing unicorn tear soup", type: "unhinged" }
+    ]
+  },
+  {
+    opponent: "Rival Dragon: 'Final Ultimate Trial: What is Eunyeong Teacher's absolute favorite hilarious hobby when grading spell scrolls?'",
+    options: [
+      { text: "Wearing glowing unicorn horns and casting cheerful cheering spells on tired students!", type: "correct" },
+      { text: "Teaching pet goldfish how to knit woolen sweaters for grumpy goblin castle guards", type: "funny" },
+      { text: "Riding a runaway broomstick backward while juggling screaming magical pineapples, angry hamsters, and flaming marshmallows!", type: "unhinged" }
+    ]
+  }
+];
+
+export default function App() {
+  const [screen, setScreen] = useState('start');
+  const [day, setDay] = useState(1);
+  const [stats, setStats] = useState({ magicPower: 25, grammarSkill: 20, gold: 60, energy: 10 });
+  const [log, setLog] = useState(['The Dragon Academy Initialized. Welcome, Young Drake!']);
+  const [introIdx, setIntroIdx] = useState(0);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [duelStep, setDuelStep] = useState(0);
+  const [correctDuelCount, setCorrectDuelCount] = useState(0);
+  const [usedQuestionIds, setUsedQuestionIds] = useState([]);
+
+  const [quizQueue, setQuizQueue] = useState([]);
+  const [currentQuizIdx, setCurrentQuizIdx] = useState(-1);
+  const [selectedIdx, setSelectedIdx] = useState(null);
+  const [feedbackStatus, setFeedbackStatus] = useState(null);
+  const [wrongFeedback, setWrongFeedback] = useState(false);
+  const [mistakeCount, setMistakeCount] = useState(0);
+  const [correctCount, setCorrectCount] = useState(0);
+  const [activeAct, setActiveAct] = useState(null);
+  const [showBonusGift, setShowBonusGift] = useState(false);
+
+  // Easter Egg Counters & Used States (Each works exactly once, restricted outside 'start' screen)
+  const [eggDragonCount, setEggDragonCount] = useState(0);
+  const [eggDragonUsed, setEggDragonUsed] = useState(false);
+
+  const [eggDayCount, setEggDayCount] = useState(0);
+  const [eggDayUsed, setEggDayUsed] = useState(false);
+
+  const [eggCurrCount, setEggCurrCount] = useState(0);
+  const [eggCurrUsed, setEggCurrUsed] = useState(false);
+
+  const [eggHeaderCount, setEggHeaderCount] = useState(0);
+  const [eggHeaderUsed, setEggHeaderUsed] = useState(false);
+
+  const [eggLogCount, setEggLogCount] = useState(0);
+  const [eggLogUsed, setEggLogUsed] = useState(false);
+
+  const [easterEggMessage, setEasterEggMessage] = useState(null);
+
+  // Title screen special interaction (Eunyeong teacher speech bubble on 5 clicks)
+  const [titleDragonClick, setTitleDragonClick] = useState(0);
+  const [showEunyeongBubble, setShowEunyeongBubble] = useState(false);
+
+  const [noBtnPos, setNoBtnPos] = useState({ x: 0, y: 0 });
+  const [gratitudeTimer, setGratitudeTimer] = useState(5);
+
+  const bgmRef = useRef(null);
+  const synthCtxRef = useRef(null);
+  const hasWindow = typeof window !== 'undefined';
+
+  useEffect(() => {
+    const audio = bgmRef.current;
+    if (!audio) return;
+
+    let targetUrl = "";
+    if (screen === 'choice') {
+      targetUrl = "https://storage.googleapis.com/eunyeongsmusicfiles/wild%20hearts.mp3";
+    } else if (screen === 'intro') {
+      targetUrl = "https://storage.googleapis.com/eunyeongsmusicfiles/all%20hope%20is%20gone.mp3";
+    } else if (screen === 'play' || currentQuizIdx >= 0) {
+      targetUrl = "https://storage.googleapis.com/eunyeongsmusicfiles/the%20last%20spell.mp3";
+    } else if (screen === 'duel') {
+      targetUrl = "https://storage.googleapis.com/eunyeongsmusicfiles/Hordes%20Descend.mp3";
+    } else if (screen === 'success') {
+      targetUrl = "https://storage.googleapis.com/eunyeongsmusicfiles/JAXSON%20GAMBLE%20-%20Lets%20Go%20(Visualizer).mp3";
+    } else if (screen === 'neutral') {
+      targetUrl = "https://storage.googleapis.com/eunyeongsmusicfiles/Thunder%20Walk.mp3";
+    } else if (screen === 'fail') {
+      targetUrl = "https://storage.googleapis.com/eunyeongsmusicfiles/FISHER%20-%20Losing%20It%20(Official%20Audio).mp3";
+    } else {
+      audio.pause();
+      return;
+    }
+
+    if (audio.src !== targetUrl) {
+      audio.pause();
+      audio.src = targetUrl;
+      audio.loop = true;
+      audio.volume = 0.5;
+      audio.play().catch(e => console.warn("Audio autoplay blocked:", e));
+    } else if (audio.paused) {
+      audio.play().catch(e => console.warn("Audio play blocked:", e));
+    }
+  }, [screen, currentQuizIdx]);
+
+  const playSfx = useCallback((type) => {
+    try {
+      if (!synthCtxRef.current && hasWindow) {
+        const WebKitAudioContext = (
+          window as typeof window & { webkitAudioContext?: typeof AudioContext }
+        ).webkitAudioContext;
+        const Ctx = window.AudioContext || WebKitAudioContext;
+        if (Ctx) synthCtxRef.current = new Ctx();
+      }
+      const ctx = synthCtxRef.current;
+      if (!ctx) return;
+      if (ctx.state === 'suspended') ctx.resume();
+      const now = ctx.currentTime;
+
+      if (type === 'correct') {
+        [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, now + i * 0.1);
+          g.gain.setValueAtTime(0.1, now + i * 0.1);
+          g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.5);
+          osc.connect(g);
+          g.connect(ctx.destination);
+          osc.start(now + i * 0.1);
+          osc.stop(now + i * 0.1 + 0.6);
+        });
+      } else if (type === 'wrong') {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.linearRampToValueAtTime(90, now + 0.3);
+        g.gain.setValueAtTime(0.15, now);
+        g.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+        osc.connect(g);
+        g.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.3);
+      } else if (type === 'click') {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(750, now);
+        g.gain.setValueAtTime(0.05, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+        osc.connect(g);
+        g.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.05);
+      } else if (type === 'magic') {
+        // Do-Mi-Sol-Do chime for Easter Eggs
+        [523.25, 659.25, 783.99, 1046.5].forEach((freq, i) => {
+          const osc = ctx.createOscillator();
+          const g = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + i * 0.1);
+          g.gain.setValueAtTime(0.12, now + i * 0.1);
+          g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.1 + 0.4);
+          osc.connect(g);
+          g.connect(ctx.destination);
+          osc.start(now + i * 0.1);
+          osc.stop(now + i * 0.1 + 0.5);
+        });
+      } else if (type === 'tick') {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(1200, now);
+        g.gain.setValueAtTime(0.08, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+        osc.connect(g);
+        g.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.03);
+      }
+    } catch (e) {
+      console.warn("Audio Context suppressed or blocked", e);
+    }
+  }, [hasWindow]);
+
+  const triggerEasterEgg = (msg) => {
+    if (screen === 'start') return; // Restriction: No Easter eggs on title screen
+    playSfx('magic');
+    setEasterEggMessage(msg);
+    setTimeout(() => setEasterEggMessage(null), 4000);
+  };
+
+  const handleStartInteraction = () => {
+    playSfx('magic');
+    setScreen('choice');
+  };
+
+  const handleStartYesClick = () => {
+    playSfx('magic');
+    setGratitudeTimer(5);
+    setScreen('gratitude');
+  };
+
+  useEffect(() => {
+    let timer;
+    if (screen === 'gratitude' && gratitudeTimer > 0) {
+      playSfx('tick');
+      timer = setInterval(() => {
+        setGratitudeTimer(prev => {
+          if (prev <= 1) {
+            setScreen('intro');
+            return 0;
+          }
+          playSfx('tick');
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [screen, gratitudeTimer, playSfx]);
+
+  const handleMoveNoButton = () => {
+    const rx = (Math.random() - 0.5) * 400;
+    const ry = (Math.random() - 0.5) * 300;
+    setNoBtnPos({ x: rx, y: ry });
+  };
+
+  const handleRestartGame = () => {
+    playSfx('click');
+    setScreen('start');
+    setDay(1);
+    setStats({ magicPower: 25, grammarSkill: 20, gold: 60, energy: 10 });
+    setDuelStep(0);
+    setCorrectDuelCount(0);
+    setLog(['The Dragon Academy Initialized. Welcome, Young Drake!']);
+    setCurrentQuizIdx(-1);
+    setIntroIdx(0);
+    setShowBonusGift(false);
+    setSelectedIdx(null);
+    setFeedbackStatus(null);
+    setWrongFeedback(false);
+    setMistakeCount(0);
+    setCorrectCount(0);
+    setActiveAct(null);
+    setUsedQuestionIds([]);
+    setNoBtnPos({ x: 0, y: 0 });
+    setEggDragonCount(0);
+    setEggDragonUsed(false);
+    setEggDayCount(0);
+    setEggDayUsed(false);
+    setEggCurrCount(0);
+    setEggCurrUsed(false);
+    setEggHeaderCount(0);
+    setEggHeaderUsed(false);
+    setEggLogCount(0);
+    setEggLogUsed(false);
+    setTitleDragonClick(0);
+    setShowEunyeongBubble(false);
+  };
+
+  const applyAction = (act, count) => {
+    const multiplier = 0.25 + (count * 0.25);
+    let mpG = 0, gsG = 0, goldC = 0, enC = 0;
+    
+    if (act.id === 'vocab') { 
+      mpG = Math.round(25 * multiplier); 
+      gsG = 0; 
+      goldC = 0; 
+      enC = 0;
+    }
+    else if (act.id === 'grammar') { 
+      mpG = 0; 
+      gsG = Math.round(25 * multiplier); 
+      goldC = 0; 
+      enC = 0;
+    }
+    else if (act.id === 'brew') { 
+      mpG = 0; 
+      gsG = 0; 
+      goldC = -35; 
+      enC = 40;    
+    }
+    else if (act.id === 'rest') { 
+      goldC = -60; 
+      enC = 40; 
+    }
+
+    const nextStats = {
+      magicPower: stats.magicPower + mpG,
+      grammarSkill: stats.grammarSkill + gsG,
+      gold: stats.gold + goldC,
+      energy: Math.min(100, Math.max(0, stats.energy + enC))
+    };
+
+    setStats(nextStats);
+    setLog(prev => [`[Day ${day}] Completed ${act.name}!`, ...prev.slice(0, 12)]);
+
+    if (day >= 7) {
+      if (nextStats.magicPower >= 85 && nextStats.grammarSkill >= 85 && nextStats.energy >= 40) {
+        setTimeout(() => setScreen('duel'), 1000);
+      } else {
+        setTimeout(() => setScreen('neutral'), 1000);
+      }
+    } else {
+      setDay(day + 1);
+    }
+  };
+
+  const handleActionClick = (act) => {
+    playSfx('click');
+    if (act.id === 'rest' && stats.gold < 60) {
+      playSfx('wrong');
+      setLog(prev => ['[ALERT] Not enough gold (Requires $60 for Dragon Nap)!', ...prev.slice(0, 12)]);
+      return;
+    }
+    if (act.id === 'brew' && stats.gold < 35) {
+      playSfx('wrong');
+      setLog(prev => ['[ALERT] Not enough gold (Requires $35 for Alchemical Brew)!', ...prev.slice(0, 12)]);
+      return;
+    }
+
+    // Dragon Nap does NOT trigger quizzes anymore. It directly executes applyAction.
+    if (act.id === 'rest') {
+      applyAction(act, 4);
+      return;
+    }
+    
+    const pool = MAGIC_QUESTIONS[act.id] || MAGIC_QUESTIONS.vocab;
+    const available = pool.filter(q => !usedQuestionIds.includes(q.id));
+    const targetPool = (available.length >= 4 ? available : pool).sort(() => 0.5 - Math.random());
+
+    const selection = targetPool.slice(0, 4).map(q => {
+      const origCorrect = q.a[q.correct];
+      const shuffled = [...q.a].sort(() => 0.5 - Math.random());
+      return { ...q, a: shuffled, correct: shuffled.indexOf(origCorrect) };
+    });
+
+    setQuizQueue(selection);
+    setCurrentQuizIdx(0);
+    setCorrectCount(0);
+    setMistakeCount(0);
+    setActiveAct(act);
+    setSelectedIdx(null);
+    setFeedbackStatus(null);
+  };
+
+  const handleQuizAnswer = (idx, isCorrect) => {
+    if (selectedIdx !== null || wrongFeedback) return;
+    setSelectedIdx(idx);
+    if (!isCorrect) {
+      playSfx('wrong');
+      setFeedbackStatus('wrong');
+      const newMistakes = mistakeCount + 1;
+      setMistakeCount(newMistakes);
+
+      if (newMistakes >= 4) {
+        setWrongFeedback(true);
+        setTimeout(() => {
+          setCurrentQuizIdx(-1);
+          setScreen('fail');
+          setWrongFeedback(false);
+          setSelectedIdx(null);
+        }, 1200);
+        return;
+      }
+
+      setWrongFeedback(true);
+      setTimeout(() => { setWrongFeedback(false); setSelectedIdx(null); setFeedbackStatus(null); }, 1500);
+      return;
+    }
+
+    playSfx('correct');
+    setFeedbackStatus('correct');
+    const currentQ = quizQueue[currentQuizIdx];
+    if (currentQ?.id) setUsedQuestionIds(prev => [...prev, currentQ.id]);
+
+    setTimeout(() => {
+      const nextCorrect = correctCount + 1;
+      setCorrectCount(nextCorrect);
+      setSelectedIdx(null);
+      setFeedbackStatus(null);
+      if (currentQuizIdx < 3) {
+        setCurrentQuizIdx(currentQuizIdx + 1);
+      } else {
+        const actToApply = activeAct;
+        setCurrentQuizIdx(-1);
+        if (nextCorrect === 4) setShowBonusGift(true);
+        if (actToApply) applyAction(actToApply, nextCorrect);
+      }
+    }, 800);
+  };
+
+  const handleClaimGift = () => {
+    playSfx('magic');
+    setStats(s => ({ ...s, gold: s.gold + 25, energy: Math.min(100, s.energy + 10) }));
+    setLog(l => ["[DRAGON HOARD] Found Hidden Gold & Mana! +$25, +10 Energy", ...l.slice(0, 12)]);
+    setShowBonusGift(false);
+  };
+
+  const handleDuelChoice = (type) => {
+    playSfx('magic');
+    
+    // Rule: If any question in the Grand Flame Tournament is answered incorrectly (type !== 'correct'), trigger Neutral Ending immediately.
+    if (type !== 'correct') {
+      setScreen('neutral');
+      return;
+    }
+
+    let nextCorrectCount = correctDuelCount + 1;
+    setCorrectDuelCount(nextCorrectCount);
+
+    if (duelStep < DUEL_QUESTIONS.length - 1) {
+      setDuelStep(duelStep + 1);
+    } else {
+      if (nextCorrectCount >= DUEL_QUESTIONS.length) setScreen('success');
+      else setScreen('neutral');
+    }
+  };
+
+  const shuffledDuelOptions = useMemo(() => {
+    if (screen !== 'duel' || !DUEL_QUESTIONS[duelStep]) return [];
+    return [...DUEL_QUESTIONS[duelStep].options].sort(() => 0.5 - Math.random());
+  }, [duelStep, screen]);
+
+  return (
+    <div className="w-full h-screen bg-[#2a0f08] flex items-center justify-center font-serif overflow-hidden p-2 relative text-[#fdf2e9]">
+      <audio ref={bgmRef} preload="auto" style={{ display: 'none' }} />
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=MedievalSharp&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=UnifrakturMaguntia&display=swap');
+        .magic-title { font-family: 'Cinzel', serif; }
+        .bleeding-red-neon {
+          color: #ff1a1a;
+          text-shadow: 0 0 10px #ff0000, 0 0 25px #cc0000, 0 0 40px #880000, 0 0 60px #550000;
+          animation: bleed-glow 3.5s ease-in-out infinite alternate;
+        }
+        @keyframes bleed-glow {
+          0% { text-shadow: 0 0 6px #ff1a1a, 0 0 12px #bb0000, 0 0 25px #660000; }
+          100% { text-shadow: 0 0 20px #ff3333, 0 0 40px #ff0000, 0 0 60px #990000, 0 0 80px #500000; }
+        }
+        .handwritten-font { font-family: 'IM Fell English SC', serif; letter-spacing: 0.05em; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: linear-gradient(to bottom, #8c3929, #ff8c00); border-radius: 10px; }
+        .gold-border { border: 4px double #ff8c00; }
+        .medieval-scroll-bg {
+          background-color: #2b170e;
+          background-image: radial-gradient(circle, rgba(140, 58, 41, 0.3) 0%, rgba(20, 7, 4, 0.95) 100%),
+                            url('https://www.transparenttextures.com/patterns/old-mathematics.png');
+          border: 6px double #d4af37;
+          box-shadow: 0 0 50px rgba(0,0,0,0.9), inset 0 0 40px rgba(212, 175, 55, 0.3);
+        }
+      `}</style>
+
+      {/* Easter Egg Notification Toast */}
+      {easterEggMessage && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[9999] bg-[#ff8c00] text-[#1e0800] px-6 py-3 rounded-full font-black text-sm shadow-2xl gold-border animate-bounce">
+          🔥 {easterEggMessage} 🔥
+        </div>
+      )}
+
+      {showBonusGift && (
+        <div className="absolute inset-0 z-[1000] flex flex-col items-center justify-center bg-black/70 backdrop-blur-md">
+          <div onClick={handleClaimGift} className="text-[120px] cursor-pointer hover:scale-110 transition-transform select-none mb-4 animate-bounce">🎁</div>
+          <div className="bg-[#3d1810] px-10 py-6 rounded-3xl gold-border shadow-2xl text-center max-w-sm">
+            <h3 className="text-3xl font-black text-[#ff8c00] mb-2">DRAGON HOARD!</h3>
+            <p className="text-sm text-[#fdf2e9] uppercase tracking-wider">Tap the treasure chest to collect your reward!</p>
+          </div>
+        </div>
+      )}
+
+      <div className="w-full max-w-5xl bg-[#3d1810] rounded-[3rem] gold-border shadow-[0_0_50px_rgba(255,140,0,0.3)] flex flex-col relative h-full max-h-[95vh] overflow-hidden z-10">
+
+        {/* Top Header Bar */}
+        <div className="h-14 bg-[#230d08] flex items-center justify-between px-8 shrink-0 border-b-2 border-[#ff8c00]/40 z-[150]">
+          <div 
+            className="flex items-center gap-3 text-[#ff8c00] cursor-pointer select-none"
+            onClick={() => {
+              playSfx('click');
+              if (eggHeaderUsed) return;
+              setEggHeaderCount(prev => {
+                const next = prev + 1;
+                if (next === 5) {
+                  setEggHeaderUsed(true);
+                  triggerEasterEgg("EASTER EGG #4 UNLOCKED: Header Blessing! +60 Dragon Mana granted!");
+                  setStats(s => ({ ...s, magicPower: s.magicPower + 60 }));
+                  return 0;
+                }
+                return next;
+              });
+            }}
+          >
+            <Flame size={24} className="animate-spin" style={{ animationDuration: '6s' }} />
+            <span className="text-[14px] font-black tracking-[0.2em] uppercase magic-title">The Dragon Academy v3.5</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => { playSfx('click'); setShowTutorial(true); }} 
+              className="bg-[#ff8c00] text-[#230d08] px-4 py-1.5 rounded-full text-[12px] font-black flex items-center gap-1.5 hover:bg-[#ffa500] transition-all shadow-md cursor-pointer"
+            >
+              <HelpCircle size={16} /> GUIDE
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 flex flex-col bg-[#1f0a06] overflow-hidden relative">
+
+          {screen === 'start' && (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 relative overflow-hidden text-center">
+              {/* Wallpaper Background */}
+              <div 
+                className="absolute inset-0 bg-cover bg-center z-[1] pointer-events-none filter brightness-[0.75] contrast-125 saturate-90"
+                style={{ backgroundImage: `url('https://drive.google.com/thumbnail?id=1i6ENmwblliWOPVtZrtzMS6llKcUyFMvB&sz=w1600')` }}
+              ></div>
+              <div className="absolute inset-0 bg-gradient-to-t from-[#120502]/90 via-[#1f0a06]/50 to-[#120502]/90 z-[2] pointer-events-none"></div>
+
+              {/* Title in absolute foreground (z-50) with deep dark-red bleeding neon */}
+              <h1 className="text-[3rem] md:text-[4.5rem] magic-title bleeding-red-neon leading-tight mb-4 z-[50] relative">The Dragon Academy</h1>
+              <p className="text-[#f5c6a5] font-bold tracking-[0.4em] uppercase text-xs mb-8 z-40 relative">The Realm of Fire Spells & Dragon Lexicon</p>
+              
+              {/* Title Screen Dragon Avatar with Eunyeong Speech Bubble on 5 clicks (positioned lower to avoid overlap) */}
+              <div 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  playSfx('click');
+                  setTitleDragonClick(prev => {
+                    const next = prev + 1;
+                    if (next === 5) {
+                      setShowEunyeongBubble(true);
+                      return 0;
+                    }
+                    return next;
+                  });
+                }}
+                className="cursor-pointer z-[60] mb-8 relative inline-block"
+              >
+                {showEunyeongBubble && (
+                  <div className="absolute top-[180%] left-1/2 -translate-x-1/2 bg-[#fdf5e6] text-[#2c1810] px-6 py-3 rounded-2xl border-2 border-[#8c4a29] shadow-2xl z-[100] animate-bounce whitespace-nowrap handwritten-font text-lg font-black pointer-events-none">
+                    Eunyeong teacher believes in you! ✨
+                  </div>
+                )}
+                <DragonAvatar size="text-[140px]" className="animate-pulse" withHat={true} />
+              </div>
+
+              <button type="button" onClick={handleStartInteraction} className="bg-gradient-to-r from-[#8c3929] via-[#ff8c00] to-[#8c3929] text-[#230d08] px-16 py-5 rounded-full text-2xl font-black shadow-[0_0_25px_rgba(255,140,0,0.6)] hover:scale-105 active:scale-95 uppercase tracking-widest border-2 border-white/50 cursor-pointer pointer-events-auto z-50">
+                Enter Academy
+              </button>
+            </div>
+          )}
+
+          {screen === 'choice' && (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center relative">
+              <h2 className="text-3xl md:text-4xl magic-title text-[#ff8c00] mb-8 max-w-xl">Will you enroll as our star apprentice in magical English?</h2>
+              <div className="flex flex-col sm:flex-row gap-6 relative min-h-[100px] w-full max-w-md items-center justify-center">
+                <button onClick={handleStartYesClick} className="bg-[#ff8c00] text-[#230d08] px-10 py-4 rounded-full text-xl font-black shadow-lg hover:scale-105 uppercase tracking-widest cursor-pointer">
+                  YES, I ACCEPT!
+                </button>
+                <div style={{ transform: `translate(${noBtnPos.x}px, ${noBtnPos.y}px)`, transition: 'transform 0.05s ease-out' }}>
+                  <button onMouseEnter={handleMoveNoButton} onTouchStart={handleMoveNoButton} onClick={(e) => { e.preventDefault(); handleMoveNoButton(); }} className="bg-gray-700 text-gray-300 px-10 py-4 rounded-full text-xl font-black uppercase tracking-widest cursor-pointer">
+                    NO
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {screen === 'gratitude' && (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+              <div className="bg-[#3d1810] p-12 rounded-[3rem] gold-border shadow-2xl max-w-xl">
+                <h2 className="text-3xl font-black text-[#ff8c00] mb-4 uppercase">May the dragon flames guide your path!</h2>
+                <p className="text-[#e2b08a] text-lg font-bold">Entering Academy in {gratitudeTimer}s...</p>
+              </div>
+            </div>
+          )}
+
+          {screen === 'intro' && (
+            <div className="flex-1 flex flex-col items-center justify-center p-6 text-center relative overflow-hidden">
+              <div 
+                className="absolute inset-0 bg-cover bg-center z-0 pointer-events-none filter brightness-[0.7] contrast-125"
+                style={{ backgroundImage: `url('https://drive.google.com/thumbnail?id=1i6ENmwblliWOPVtZrtzMS6llKcUyFMvB&sz=w1600')` }}
+              ></div>
+              <div className="absolute inset-0 bg-black/60 z-[1] pointer-events-none"></div>
+
+              <div className="z-10 relative">
+                <DragonAvatar size="text-[120px]" className="mb-4 animate-bounce" withHat={true} />
+              </div>
+              <div className="w-full max-w-xl bg-[#3d1810]/95 backdrop-blur-md rounded-[3rem] p-10 gold-border shadow-2xl z-10 relative">
+                <p className="text-2xl font-serif text-[#fdf2e9] italic leading-relaxed mb-8">"{INTRO_STEPS[introIdx].text}"</p>
+                <div className="flex justify-end">
+                  <button onClick={() => { playSfx('click'); introIdx < INTRO_STEPS.length - 1 ? setIntroIdx(introIdx + 1) : setScreen('play'); }} className="flex items-center gap-2 bg-[#ff8c00] text-[#230d08] px-8 py-3 rounded-xl font-black text-lg hover:bg-[#ffa500] uppercase shadow-lg cursor-pointer">
+                    Next <ChevronRight size={20} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {screen === 'play' && (
+            <div className="flex-1 flex flex-col md:flex-row p-6 gap-6 overflow-hidden">
+              <div className="w-full md:w-72 flex flex-col gold-border rounded-[2.5rem] bg-[#3d1810]/80 p-5 shrink-0 overflow-y-auto custom-scrollbar shadow-xl">
+                {/* Easter Egg #2: Day counter 5 clicks (One time only) */}
+                <div 
+                  onClick={() => {
+                    playSfx('click');
+                    if (eggDayUsed) return;
+                    setEggDayCount(prev => {
+                      const next = prev + 1;
+                      if (next === 5) {
+                        setEggDayUsed(true);
+                        triggerEasterEgg("EASTER EGG #2 UNLOCKED: Time Portal! Day instantly advanced without energy drain!");
+                        setDay(d => Math.min(7, d + 1));
+                        return 0;
+                      }
+                      return next;
+                    });
+                  }}
+                  className="bg-[#230d08] p-4 rounded-[2.5rem] gold-border text-center mb-6 shadow-inner cursor-pointer select-none"
+                >
+                  <div 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      playSfx('click');
+                      if (eggDragonUsed) return;
+                      setEggDragonCount(prev => {
+                        const next = prev + 1;
+                        if (next === 5) {
+                          setEggDragonUsed(true);
+                          triggerEasterEgg("EASTER EGG #1 UNLOCKED: Ancient Dragon Spirit! Energy fully restored to 100!");
+                          setStats(s => ({ ...s, energy: 100 }));
+                          return 0;
+                        }
+                        return next;
+                      });
+                    }}
+                  >
+                    <DragonAvatar size="text-[60px]" className="mb-2" withHat={true} />
+                  </div>
+                  <div className="bg-[#ff8c00] text-[#230d08] text-xl font-black py-1 rounded-full shadow">Day {day}/7</div>
+                </div>
+                <div className="space-y-4 mb-6">
+                  <StatBar label="Magic Power" val={stats.magicPower} max={100} color="bg-purple-600" threshold={85} />
+                  <StatBar label="Grammar Skill" val={stats.grammarSkill} max={100} color="bg-emerald-600" threshold={85} />
+                  <StatBar label="Energy" val={stats.energy} max={100} color="bg-rose-600" threshold={40} />
+                  <div className="bg-[#230d08] p-3 rounded-2xl gold-border flex justify-between items-center shadow-inner">
+                    <Coins size={20} className="text-[#ff8c00]" />
+                    <span className="text-[#ff8c00] text-xl font-black">${stats.gold}</span>
+                  </div>
+                </div>
+                <button onClick={handleRestartGame} className="bg-rose-900 text-white py-2 rounded-xl font-black uppercase text-[11px] flex items-center justify-center gap-2 hover:bg-rose-800 transition-colors shadow-md mb-6 cursor-pointer">
+                  <RefreshCw size={14} /> Restart Academy
+                </button>
+                {/* Easter Egg #5: Activity log 5 clicks (One time only) */}
+                <div 
+                  onClick={() => {
+                    playSfx('click');
+                    if (eggLogUsed) return;
+                    setEggLogCount(prev => {
+                      const next = prev + 1;
+                      if (next === 5) {
+                        setEggLogUsed(true);
+                        triggerEasterEgg("EASTER EGG #5 UNLOCKED: Alchemical Gold Hoard! +$150 Gold added!");
+                        setStats(s => ({ ...s, gold: s.gold + 150 }));
+                        return 0;
+                      }
+                      return next;
+                    });
+                  }}
+                  className="flex-1 bg-[#1f0a06] p-4 rounded-2xl gold-border flex flex-col min-h-[130px] overflow-hidden cursor-pointer select-none"
+                >
+                  <div className="text-[11px] font-black text-[#ff8c00] uppercase mb-2 border-b border-[#ff8c00]/30 pb-1">Activity Log (Tap 5x)</div>
+                  <div className="flex-1 overflow-y-auto custom-scrollbar text-[#e2b08a] text-[11px] italic leading-relaxed">
+                    {log.map((l, i) => <div key={i} className="mb-1.5 border-l-2 border-[#ff8c00]/40 pl-2">{l}</div>)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex-1 bg-[#3d1810]/60 gold-border rounded-[3.5rem] p-8 backdrop-blur-lg shadow-2xl flex flex-col overflow-hidden">
+                <div className="flex justify-between items-center mb-6 border-b-2 border-[#ff8c00]/30 pb-4">
+                  {/* Easter Egg #3: Dragon Curriculum header 5 clicks (One time only) */}
+                  <h3 
+                    onClick={() => {
+                      playSfx('click');
+                      if (eggCurrUsed) return;
+                      setEggCurrCount(prev => {
+                        const next = prev + 1;
+                        if (next === 5) {
+                          setEggCurrUsed(true);
+                          triggerEasterEgg("EASTER EGG #3 UNLOCKED: Ancient Scroll Decrypted! +50 Grammar Skill added!");
+                          setStats(s => ({ ...s, grammarSkill: s.grammarSkill + 50 }));
+                          return 0;
+                        }
+                        return next;
+                      });
+                    }}
+                    className="text-2xl font-black text-[#ff8c00] italic uppercase flex items-center gap-3 magic-title cursor-pointer select-none"
+                  >
+                    <BookOpen size={28} className="text-[#ff8c00]" /> Dragon Curriculum (Tap 5x)
+                  </h3>
+                  <div className="text-[11px] font-bold text-[#e2b08a] uppercase">Target: Magic 85 | Grammar 85 | Energy 40</div>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 overflow-y-auto pr-2 custom-scrollbar flex-1 pb-4">
+                  {[
+                    { id: 'vocab', name: 'Spell Vocabulary', icon: <Sparkles size={24} />, desc: 'Boosts Magic Power' },
+                    { id: 'grammar', name: 'Dragon Grammar', icon: <GraduationCap size={24} />, desc: 'Boosts Grammar Skill' },
+                    { id: 'brew', name: 'Alchemical Brew', icon: <Wand2 size={24} />, desc: 'Cost $35 | Energy +40' },
+                    { id: 'rest', name: 'Dragon Nap', icon: <Heart size={24} />, desc: 'Cost $60 | Energy +40' }
+                  ].map(act => (
+                    <button key={act.id} onClick={() => handleActionClick(act)} className="bg-[#230d08] p-6 rounded-[2.5rem] gold-border hover:bg-[#3d1810] text-center shadow-xl active:scale-95 group transition-all flex flex-col items-center justify-center cursor-pointer">
+                      <div className="p-4 bg-[#3d1810] rounded-2xl mb-3 text-[#ff8c00] group-hover:scale-110 transition-transform shadow">{act.icon}</div>
+                      <div className="text-lg font-black text-[#ff8c00] mb-1">{act.name}</div>
+                      <div className="text-[11px] font-bold text-[#e2b08a] uppercase opacity-80">{act.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {currentQuizIdx >= 0 && (
+            <div className="absolute inset-0 bg-black/85 backdrop-blur-xl z-[200] flex items-center justify-center p-4">
+              <div className="bg-[#3d1810] rounded-[3rem] gold-border w-full max-w-lg relative shadow-2xl p-8">
+                <button onClick={() => { playSfx('click'); setCurrentQuizIdx(-1); }} className="absolute -top-4 -right-4 p-3 text-[#ff8c00] bg-[#230d08] rounded-full gold-border cursor-pointer"><X size={20} /></button>
+                {wrongFeedback && <div className="absolute inset-0 bg-rose-950/95 z-50 flex flex-col items-center justify-center p-8 text-white rounded-[3rem]"><AlertTriangle size={64} className="animate-bounce mb-4 text-[#ff8c00]" /><h2 className="text-3xl font-black uppercase">SPELL FAILED! TRY AGAIN</h2></div>}
+                <h2 className="text-xl font-black text-center text-[#ff8c00] mb-4 border-b border-[#ff8c00]/30 pb-2">SPELL STEP {currentQuizIdx + 1}/4</h2>
+                <div className="bg-[#230d08] p-6 rounded-2xl text-center mb-6 gold-border shadow-inner"><p className="text-lg font-bold italic text-[#fdf2e9]">"{quizQueue[currentQuizIdx]?.q}"</p></div>
+                <div className="space-y-3">
+                  {quizQueue[currentQuizIdx]?.a.map((opt, i) => (
+                    <button key={i} disabled={selectedIdx !== null} onClick={() => handleQuizAnswer(i, i === quizQueue[currentQuizIdx].correct)} className={`w-full text-left px-6 py-4 rounded-2xl font-black text-base transition-all flex justify-between items-center gold-border cursor-pointer ${selectedIdx === i ? (feedbackStatus === 'correct' ? 'bg-emerald-800 text-white' : 'bg-rose-800 text-white') : 'bg-[#230d08] text-[#fdf2e9] hover:bg-[#3d1810]'}`}>
+                      <span>{String.fromCharCode(65 + i)}. {opt}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {screen === 'duel' && (
+            <div className="flex-1 flex flex-col items-center justify-center p-6 bg-[#2a0b18] z-[20] overflow-y-auto">
+              <div className="w-full max-w-xl bg-[#3d1810] backdrop-blur-2xl rounded-[3rem] p-8 gold-border shadow-2xl text-center">
+                <div className="text-[50px] mb-4 flex justify-center gap-4 animate-bounce">🧙‍♂️⚡🐲</div>
+                <h2 className="text-3xl magic-title text-[#ff8c00] mb-6 border-b border-[#ff8c00]/30 pb-2">The Grand Flame Tournament (Trial {duelStep + 1}/{DUEL_QUESTIONS.length})</h2>
+                <div className="bg-[#230d08] p-6 rounded-2xl mb-6 gold-border shadow-inner"><p className="text-base text-[#fdf2e9] font-serif italic leading-snug">"{DUEL_QUESTIONS[duelStep]?.opponent}"</p></div>
+                <div className="grid grid-cols-1 gap-3 w-full">
+                  {shuffledDuelOptions.map((opt, i) => (
+                    <button key={`${duelStep}-${i}`} onClick={() => handleDuelChoice(opt.type)} className="bg-[#230d08] hover:bg-[#ff8c00] text-[#fdf2e9] hover:text-[#230d08] py-4 px-6 rounded-xl font-black text-sm transition-all gold-border flex items-center justify-between text-left cursor-pointer">
+                      <span>{opt.text}</span><ChevronRight size={18} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {['success', 'neutral', 'fail'].includes(screen) && (
+            <div className="flex-1 flex flex-col items-center justify-center p-10 text-center bg-[#1f0a06] z-[20] overflow-y-auto custom-scrollbar">
+              <div className="text-[90px] mb-6 animate-bounce">
+                {screen === 'success' ? '👑🔥🌟' : screen === 'neutral' ? '📜🐲🏠' : '🌪️🐲⚡'}
+              </div>
+              <h2 className="text-4xl md:text-5xl magic-title mb-6 text-[#ff8c00]">
+                {screen === 'success' ? 'Grand Dragon Wizard of Lexicon' : screen === 'neutral' ? 'The Wise Volcano Alchemist' : 'The Apprentice of Fire Detention'}
+              </h2>
+              <div className="text-base max-w-2xl italic text-[#e2b08a] mb-8 bg-[#3d1810] p-8 rounded-[2.5rem] gold-border shadow-xl text-left leading-relaxed">
+                {screen === 'success' && "Magnificent! Your mastery of vocabulary spells and ancient dragon grammar completely overwhelmed your rival in the Grand Flame Tournament. The Headmaster bestowed upon you the legendary Ruby Fire Wand of English Excellence. You are now celebrated throughout the dragon realm as greatest wizard of words!"}
+                {screen === 'neutral' && "You fell slightly short of total dragon supremacy or encountered a tournament misstep, but your dedication is undeniable. You've established a peaceful academy in the volcanic valley where young drakes come to learn wonderful stories and correct spelling. Your rival occasionally visits for roasted magma tea!"}
+                {screen === 'fail' && "Alas! Too many spell failures and grammatical stumbles caused your flame magic to fizzle out during your studies. You've been assigned to obsidian library cleaning duty under strict supervision. Brush up on your English vocabulary and try your magical trials once again!"}
+              </div>
+              <button onClick={handleRestartGame} className="bg-[#ff8c00] text-[#230d08] px-16 py-5 rounded-full font-black text-2xl shadow-[0_0_20px_rgba(255,140,0,0.6)] transition-all uppercase border-2 border-white/50 cursor-pointer">
+                Restart Academy
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Guide Modal with Detailed Endings Included */}
+      {showTutorial && (
+        <div className="absolute inset-0 bg-black/95 z-[400] flex items-center justify-center p-4 backdrop-blur-2xl">
+          <div className="medieval-scroll-bg rounded-[3.5rem] w-full max-w-4xl p-10 relative shadow-2xl h-[90vh] flex flex-col overflow-hidden text-[#f5ebd6]">
+            <button onClick={() => { playSfx('click'); setShowTutorial(false); }} className="absolute top-6 right-6 p-3 text-[#ff8c00] hover:scale-110 transition-all z-10 cursor-pointer"><X size={28} /></button>
+            
+            <div className="text-center mb-6 border-b-2 border-[#d4af37]/40 pb-4">
+              <h2 className="text-3xl md:text-5xl font-black text-[#ff8c00] uppercase magic-title flex items-center justify-center gap-3">
+                <Scroll size={40} /> Codex Draconis & Master Guide
+              </h2>
+              <p className="text-sm uppercase tracking-[0.3em] text-[#e2b08a] mt-2 handwritten-font">The Sacred Scholastic Doctrine of The Dragon Academy</p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto space-y-8 custom-scrollbar px-6 text-xl md:text-2xl text-[#fdf2e9] leading-relaxed handwritten-font">
+              <section className="space-y-3 border-b border-[#ff8c00]/20 pb-6">
+                <h3 className="text-2xl md:text-3xl font-black text-[#ff8c00] flex items-center gap-2">
+                  <Flame size={28} /> I. The Seven-Day Trial of Lexicon
+                </h3>
+                <p className="text-lg md:text-xl text-[#e2b08a] leading-relaxed">
+                  Greetings, young drake! Under the strict tutelage of our Headmaster, you must undergo a rigorous 7-day curriculum of arcane English vocabulary and grammatical structure. Your ultimate destiny is to conquer the Grand Flame Tournament on Night 7 against your haughty rival. To stand victorious, you must achieve and maintain minimum mastery levels of <strong className="text-[#ffd700]">85 Magic Power</strong>, <strong className="text-[#ffd700]">85 Grammar Skill</strong>, and possess at least <strong className="text-[#ffd700]">40 Vital Energy</strong> (starting at 10 Energy).
+                </p>
+              </section>
+
+              <section className="space-y-3 border-b border-[#ff8c00]/20 pb-6">
+                <h3 className="text-2xl md:text-3xl font-black text-[#ff8c00] flex items-center gap-2">
+                  <BookOpen size={28} /> II. Curriculum & Arcane Quizzes
+                </h3>
+                <p className="text-lg md:text-xl text-[#e2b08a] leading-relaxed">
+                  Spell Vocabulary strictly boosts Magic Power. Dragon Grammar strictly boosts Grammar Skill. Alchemical Brew costs $35 Gold and restores 40 Energy. Dragon Nap costs $60 Gold and restores 40 Energy instantly without any quizzes! Beware: accumulating 4 incorrect responses across a single academic session will cause your magical focus to shatter, resulting in immediate academy expulsion and detention!
+                </p>
+              </section>
+
+              <section className="space-y-3 border-b border-[#ff8c00]/20 pb-6">
+                <h3 className="text-2xl md:text-3xl font-black text-[#ff8c00] flex items-center gap-2">
+                  <Coins size={28} /> III. Resource Management: Gold & Vital Energy
+                </h3>
+                <p className="text-lg md:text-xl text-[#e2b08a] leading-relaxed">
+                  When fatigue overtakes you, visit the Dragon Nap chambers (costing $60 Gold) or Alchemical Brew stations (costing $35 Gold) which restore 40 Energy. Gold can be accumulated through correct answers or secret hoards.
+                </p>
+              </section>
+
+              <section className="space-y-3 border-b border-[#ff8c00]/20 pb-6">
+                <h3 className="text-2xl md:text-3xl font-black text-[#ff8c00] flex items-center gap-2">
+                  <Wand2 size={28} /> IV. Detailed Endings Guide
+                </h3>
+                <p className="text-lg md:text-xl text-[#e2b08a] leading-relaxed">
+                  Your destiny upon completing the 7-day trials is determined by your final attributes and tournament performance:
+                </p>
+                <ul className="list-disc pl-6 space-y-4 text-lg md:text-xl text-[#e2b08a]">
+                  <li><strong className="text-[#ffd700]">1. Grand Dragon Wizard of Lexicon (Success Ending):</strong> Achieved when Magic Power ≥ 85, Grammar Skill ≥ 85, and Energy ≥ 40 upon reaching Day 7, followed by answering <strong className="text-white">every single question</strong> in the Grand Flame Tournament correctly. You win the Ruby Fire Wand of English Excellence!</li>
+                  <li><strong className="text-[#ffd700]">2. The Wise Volcano Alchemist (Neutral Ending):</strong> Triggered if stats fall short at Day 7, or if <strong className="text-rose-400">even a single mistake</strong> is made during the Grand Flame Tournament. You establish a peaceful volcanic academy teaching wonderful stories and correct spelling.</li>
+                  <li><strong className="text-[#ffd700]">3. The Apprentice of Fire Detention (Failure Ending):</strong> Triggered by accumulating 4 wrong answers in any study session. You are assigned to obsidian library cleaning duty under strict supervision.</li>
+                </ul>
+              </section>
+
+              <section className="space-y-3 border-b border-[#ff8c00]/20 pb-6">
+                <h3 className="text-2xl md:text-3xl font-black text-[#ff8c00] flex items-center gap-2">
+                  <Sparkles size={28} /> V. The Five Divine Easter Eggs (One-Time Activation)
+                </h3>
+                <p className="text-lg md:text-xl text-[#e2b08a] leading-relaxed">
+                  Ancient parchment lore reveals five secret interactive blessings hidden within the academy interface (active only after leaving the title screen). Tapping five times upon the respective sacred relics plays a cheerful *Do-Mi-Sol-Do* chime and unlocks hidden powers (each usable once per game session):
+                </p>
+                <ul className="list-disc pl-6 space-y-3 text-lg md:text-xl text-[#e2b08a]">
+                  <li><strong className="text-[#ffd700]">1. The Dragon Avatar:</strong> Tap 5 times on the starter dragon to receive Ancient Dragon Spirit (Energy restored to 100).</li>
+                  <li><strong className="text-[#ffd700]">2. The Day Counter:</strong> Tap 5 times on the Day badge during study to trigger Time Portal (Day instantly advanced).</li>
+                  <li><strong className="text-[#ffd700]">3. The Curriculum Header:</strong> Tap 5 times on "Dragon Curriculum" to decrypt Ancient Scrolls (+50 Grammar Skill).</li>
+                  <li><strong className="text-[#ffd700]">4. The Top Header Title:</strong> Tap 5 times on "The Dragon Academy" to receive Headmaster's Blessing (+60 Dragon Mana).</li>
+                  <li><strong className="text-[#ffd700]">5. The Activity Log:</strong> Tap 5 times on the Activity Log box to unlock Alchemical Gold Hoard (+$150 Gold).</li>
+                </ul>
+              </section>
+            </div>
+
+            <button onClick={() => { playSfx('click'); setShowTutorial(false); }} className="mt-6 bg-[#ff8c00] text-[#230d08] py-4 rounded-2xl font-black text-2xl uppercase shadow-lg hover:bg-[#ffa500] cursor-pointer transition-transform active:scale-95 handwritten-font">
+              I Understand, Headmaster!
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
